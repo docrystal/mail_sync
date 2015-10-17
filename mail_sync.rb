@@ -107,6 +107,3 @@ class MailSync
     end
   end
 end
-
-MailSync.instance.sync_info
-MailSync.instance.sync_teams

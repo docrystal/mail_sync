@@ -26,11 +26,11 @@ class MailSyncApp < Sinatra::Base
   end
 
   post '/payload' do
-    if request.headers['X-Hub-Signature'] != expected_secret
+    if request['X-Hub-Signature'] != expected_secret
       halt 403
     end
 
-    if request.headers['X-Github-Event'] == 'ping'
+    if request['X-Github-Event'] == 'ping'
       return 'OK'
     end
 

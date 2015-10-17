@@ -1,5 +1,5 @@
-require 'openssl'
 require './mail_sync'
+require 'openssl'
 
 class MailSyncApp < Sinatra::Base
   def self.secret

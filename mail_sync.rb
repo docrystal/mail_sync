@@ -1,5 +1,3 @@
-require 'singleton'
-require 'json'
 require 'bundler/setup'
 Bundler.require
 Dotenv.load
@@ -46,6 +44,19 @@ class MailgunClient
     ml = "#{ml.downcase}@docrystal.org"
 
     conn.delete("lists/#{ml}/#{address}")
+  end
+
+  def routes
+    @routes ||= Hash[*(conn.get('routes').body['items'].map { |r| [r['description'], r] }.flatten)]
+  end
+
+  def add_route(id, from, to)
+    desc = "GitHub: #{id}"
+    routes[desc] ||= conn.post('routes', priority: 1, description: "GitHub: #{id}", expression: "match_recipient('#{from}')", action: "forward('#{to}')").body['route']
+  end
+
+  def remove_route(id)
+    conn.delete("routes/#{id}")
   end
 end
 
@@ -104,6 +115,17 @@ class MailSync
     remove_members = mailgun.ml_members('info').keys - all_members.values.map { |m| m.email }
     remove_members.each do |address|
       mailgun.remove_ml_member('info', address)
+    end
+  end
+
+  def sync_members
+    all_members.values.each do |member|
+      mailgun.add_route(member.id, "#{member.login}@docrystal.org", member.email)
+    end
+    current_routes = Hash[*(mailgun.routes.values.map { |u| [u['description'].sub('GitHub: ', '').to_i, u['id']] }.flatten)]
+
+    (current_routes.keys - all_members.values.map { |m| m.id }).each do |id|
+      mailgun.remove_route(current_routes[id])
     end
   end
 end

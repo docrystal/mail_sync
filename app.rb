@@ -2,23 +2,8 @@ require 'openssl'
 require './mail_sync'
 
 class MailSyncApp < Sinatra::Base
-  HMAC_DIGEST = OpenSSL::Digest::Digest.new('sha1')
-
   def self.secret
     @secret ||= ENV['APPLICATION_SECRET']
-  end
-
-  before do
-    request.body.rewind
-    @request_body = request.body.read
-
-    if request.body.size > 0
-      request.body.rewind
-      begin
-        @params = JSON.parse(request.body.read, symbolize_names: true)
-      rescue JSON::JSONError
-      end
-    end
   end
 
   get '/' do
@@ -26,9 +11,9 @@ class MailSyncApp < Sinatra::Base
   end
 
   post '/payload' do
-    if request['X-Hub-Signature'] != expected_secret
-      halt 403
-    end
+    request.body.rewind
+    payload_body = request.body.read
+    verify_signature(payload_body)
 
     if request['X-Github-Event'] == 'ping'
       return 'OK'
@@ -43,7 +28,8 @@ class MailSyncApp < Sinatra::Base
 
   private
 
-  def expected_secret
-    'sha1='+OpenSSL::HMAC.hexdigest(HMAC_DIGEST, self.class.secret, @request_body)
+  def verify_signature(payload_body)
+    signature = 'sha1=' + OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), self.class.secret, payload_body)
+    return halt 500, "Signatures didn't match!" unless Rack::Utils.secure_compare(signature, request.env['HTTP_X_HUB_SIGNATURE'])
   end
 end

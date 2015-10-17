@@ -15,10 +15,6 @@ class MailSyncApp < Sinatra::Base
     payload_body = request.body.read
     verify_signature(payload_body)
 
-    if request['X-Github-Event'] == 'ping'
-      return 'OK'
-    end
-
     sync = MailSync.new
     sync.sync_info
     sync.sync_teams

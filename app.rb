@@ -18,6 +18,7 @@ class MailSyncApp < Sinatra::Base
     sync = MailSync.new
     sync.sync_info
     sync.sync_teams
+    sync.sync_members
 
     'Sync'
   end
